@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>لوحة المالك | Mr. Mustafa Yousef</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0f172a;--deep:#0a1020;--soft:#172037;--gold:#f59e0b;--gl:#fbbf24;--text:#e8ecf4;--muted:#9aa6bd;--line:rgba(245,158,11,.28)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;background:var(--navy);color:var(--text);line-height:1.8;min-height:100vh}
+h1,h2{font-family:"Reem Kufi",sans-serif}
+.wrap{width:min(900px,94%);margin:0 auto;padding:1.5rem 0 3rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+header h1{color:var(--gl);font-size:1.4rem}
+button,select,input,textarea{font:inherit;color:var(--text)}
+input,select,textarea{background:var(--soft);border:1px solid rgba(148,163,184,.3);border-radius:10px;padding:.6rem .9rem;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+button{background:var(--gold);color:var(--deep);border:0;border-radius:999px;padding:.5rem 1.2rem;font-weight:600;cursor:pointer}
+button.del{background:transparent;color:#fca5a5;border:1px solid #fca5a5}
+button.ghost{background:transparent;color:var(--gl);border:1px solid var(--gold)}
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.tabs button{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.tabs button.on{background:var(--gold);color:var(--deep)}
+.panel{display:none}.panel.on{display:block}
+form{display:grid;gap:.7rem;background:var(--deep);border:1px solid var(--line);border-radius:14px;padding:1.2rem;margin-bottom:1.2rem}
+.row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.8rem 0;border-bottom:1px solid var(--line)}
+.grow{flex:1;min-width:180px}
+small{display:block;color:var(--muted)}
+.tag{padding:.1rem .7rem;border-radius:999px;font-size:.85rem}
+.ok{background:rgba(34,197,94,.18);color:#86efac}.wait{background:rgba(245,158,11,.18);color:var(--gl)}
+#login{max-width:380px;margin:12vh auto;padding:0 1rem}
+.err{color:#fca5a5;min-height:1.5em;margin-top:.5rem}
+footer{text-align:center;color:var(--muted);font-size:.9rem;margin-top:2rem;direction:ltr}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1 style="color:var(--gl);margin-bottom:1rem">لوحة المالك</h1>
+  <form id="lf">
+    <input id="em" type="email" placeholder="البريد الإلكتروني" autocomplete="username" required>
+    <input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password" required>
+    <button type="submit">دخول</button>
+  </form>
+  <div class="err" id="lerr"></div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header><h1>لوحة المالك</h1><button class="ghost" id="out">تسجيل خروج</button></header>
+  <div class="err" id="msg" role="alert"></div>
+  <div class="tabs" id="tabs">
+    <button data-p="p1" class="on">الطلبة</button>
+    <button data-p="p2">الدرجات</button>
+    <button data-p="p3">الكتب والامتحانات</button>
+    <button data-p="p4">محتوى عام</button>
+  </div>
+
+  <section class="panel on" id="p1"><div id="slist"></div></section>
+
+  <section class="panel" id="p2">
+    <form id="gf">
+      <select id="gs" required></select>
+      <input id="ge" placeholder="اسم الامتحان" required>
+      <input id="gsc" type="number" step="any" min="0" placeholder="الدرجة" required>
+      <input id="gm" type="number" step="any" min="1" placeholder="الدرجة النهائية" required>
+      <button type="submit">إضافة درجة</button>
+    </form>
+    <div id="glist"></div>
+  </section>
+
+  <section class="panel" id="p3">
+    <form id="mf">
+      <input id="mt" placeholder="العنوان" required>
+      <select id="mg"><option>الكل</option><option>الثانوية العامة</option><option>الإعدادية</option><option>اللغات</option></select>
+      <select id="my"><option>كتاب</option><option>مذكرة</option><option>امتحان</option></select>
+      <input id="mu" type="url" placeholder="رابط الملف (https://...)" required>
+      <button type="submit">إضافة</button>
+    </form>
+    <div id="mlist"></div>
+  </section>
+
+  <section class="panel" id="p4">
+    <form id="pf">
+      <input id="pt" placeholder="العنوان" required>
+      <textarea id="px" placeholder="النص"></textarea>
+      <input id="pi" type="url" placeholder="رابط صورة (اختياري، https://...)">
+      <button type="submit">نشر</button>
+    </form>
+    <div id="plist"></div>
+  </section>
+  <footer>Created by Abdo Hamza</footer>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+import {getFirestore,collection,doc,getDocs,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,serverTimestamp} from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+const app=initializeApp({
+  apiKey:"AIzaSyB2ftcUWyDBSXPyGOvCxHgiWxAdEqW75_M",
+  authDomain:"mostafa-portfolio-12a36.firebaseapp.com",
+  projectId:"mostafa-portfolio-12a36",
+  storageBucket:"mostafa-portfolio-12a36.firebasestorage.app",
+  messagingSenderId:"846216607520",
+  appId:"1:846216607520:web:dfafe8927438234a7c8945"
+});
+const auth=getAuth(app),db=getFirestore(app);
+const ADMINS=["P1XhskuICCdGS1C6PYTASGfJKbq1","pY7VIVQ7LOeQGn490FICX7AsmMe2"];
+const $=s=>document.querySelector(s);
+let students=[];
+
+// يبني عناصر بـ textContent فقط (آمن ضد أي نص يكتبه الطلبة)
+function h(tag,attrs={},...kids){
+  const e=document.createElement(tag);
+  for(const[k,v]of Object.entries(attrs)){
+    if(k==='class')e.className=v;
+    else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v);
+  }
+  kids.flat().forEach(x=>e.append(x));
+  return e;
+}
+let mt;
+function msg(t){$('#msg').textContent=t;clearTimeout(mt);mt=setTimeout(()=>$('#msg').textContent='',6000)}
+async function run(fn){try{await fn()}catch(e){msg('حدث خطأ: '+(e.code||e.message))}}
+const okUrl=u=>/^https:\/\//i.test(u);
+
+// Auth
+$('#lf').addEventListener('submit',e=>{
+  e.preventDefault();$('#lerr').textContent='';
+  signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value)
+    .catch(()=>$('#lerr').textContent='البريد أو كلمة المرور غير صحيحة.');
+});
+$('#out').onclick=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{
+  if(!u){$('#login').hidden=false;$('#app').hidden=true;return}
+  if(!ADMINS.includes(u.uid)){
+    signOut(auth);$('#lerr').textContent='هذا الحساب غير مصرح له بدخول لوحة المالك.';return;
+  }
+  $('#login').hidden=true;$('#app').hidden=false;
+  run(()=>Promise.all([loadStudents(),loadDocs('materials','#mlist'),loadDocs('public','#plist')]));
+});
+
+// Tabs
+$('#tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('.tabs button,.panel').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$('#'+b.dataset.p).classList.add('on');
+});
+
+// Students
+async function loadStudents(){
+  const s=await getDocs(collection(db,'users'));
+  students=s.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b)=>(!!a.approved-!!b.approved)||(a.name||'').localeCompare(b.name||'','ar'));
+  const list=$('#slist');
+  list.replaceChildren(...(students.length?students.map(st=>h('div',{class:'row'},
+    h('div',{class:'grow'},h('b',{},st.name||'-'),h('small',{},(st.grade||'')+' · '+(st.email||''))),
+    h('span',{class:'tag '+(st.approved?'ok':'wait')},st.approved?'معتمد':'بانتظار الموافقة'),
+    h('button',{onclick:()=>run(async()=>{await updateDoc(doc(db,'users',st.id),{approved:!st.approved});await loadStudents()})},st.approved?'إلغاء الموافقة':'موافقة'),
+    h('button',{class:'del',onclick:()=>run(async()=>{
+      if(!confirm('حذف بيانات الطالب '+(st.name||'')+'؟'))return;
+      await deleteDoc(doc(db,'users',st.id));
+      await deleteDoc(doc(db,'grades',st.id));
+      await loadStudents();
+    })},'حذف')
+  )):[h('p',{},'لا يوجد طلبة مسجلين بعد.')]));
+  $('#gs').replaceChildren(h('option',{value:''},'اختر الطالب'),...students.map(st=>h('option',{value:st.id},(st.name||'-')+' - '+(st.grade||''))));
+  await loadGrades();
+}
+
+// Grades
+async function getItems(uid){const d=await getDoc(doc(db,'grades',uid));return d.exists()?(d.data().items||[]):[]}
+async function loadGrades(){
+  const uid=$('#gs').value,box=$('#glist');
+  if(!uid){box.replaceChildren();return}
+  const items=await getItems(uid);
+  box.replaceChildren(...(items.length?items.map((it,i)=>h('div',{class:'row'},
+    h('div',{class:'grow'},h('b',{},it.exam),h('small',{},it.date||'')),
+    h('span',{},it.score+' / '+it.max),
+    h('button',{class:'del',onclick:()=>run(async()=>{
+      const cur=await getItems(uid);cur.splice(i,1);
+      await setDoc(doc(db,'grades',uid),{items:cur});await loadGrades();
+    })},'حذف')
+  )):[h('p',{},'لا توجد درجات لهذا الطالب.')]));
+}
+$('#gs').addEventListener('change',()=>run(loadGrades));
+$('#gf').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
+  const uid=$('#gs').value;if(!uid)return msg('اختر الطالب أولاً.');
+  const items=await getItems(uid);
+  items.push({exam:$('#ge').value.trim(),score:+$('#gsc').value,max:+$('#gm').value,date:new Date().toISOString().slice(0,10)});
+  await setDoc(doc(db,'grades',uid),{items});
+  $('#ge').value='';$('#gsc').value='';
+  await loadGrades();
+})});
+
+// Materials & public content
+async function loadDocs(col,sel){
+  const s=await getDocs(query(collection(db,col),orderBy('createdAt','desc')));
+  $(sel).replaceChildren(...(s.docs.length?s.docs.map(d=>{
+    const x=d.data();
+    return h('div',{class:'row'},
+      h('div',{class:'grow'},h('b',{},x.title||''),h('small',{},col==='materials'?(x.type+' · '+x.grade):(x.text||''))),
+      h('button',{class:'del',onclick:()=>run(async()=>{
+        if(!confirm('حذف؟'))return;
+        await deleteDoc(doc(db,col,d.id));await loadDocs(col,sel);
+      })},'حذف'));
+  }):[h('p',{},'لا يوجد محتوى بعد.')]));
+}
+$('#mf').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
+  const url=$('#mu').value.trim();if(!okUrl(url))return msg('الرابط لازم يبدأ بـ https://');
+  await addDoc(collection(db,'materials'),{title:$('#mt').value.trim(),grade:$('#mg').value,type:$('#my').value,url,createdAt:serverTimestamp()});
+  $('#mf').reset();await loadDocs('materials','#mlist');
+})});
+$('#pf').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
+  const img=$('#pi').value.trim();if(img&&!okUrl(img))return msg('رابط الصورة لازم يبدأ بـ https://');
+  await addDoc(collection(db,'public'),{title:$('#pt').value.trim(),text:$('#px').value.trim(),imageUrl:img,createdAt:serverTimestamp()});
+  $('#pf').reset();await loadDocs('public','#plist');
+})});
+</script>
+</body>
+</html>
